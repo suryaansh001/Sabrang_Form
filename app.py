@@ -284,6 +284,34 @@ def show_submission_form():
 def show_submissions():
     st.title("📋 Committee Member Registrations")
     
+    # Password protection for viewing submissions
+    if 'submissions_authenticated' not in st.session_state:
+        st.session_state.submissions_authenticated = False
+    
+    if not st.session_state.submissions_authenticated:
+        st.info("🔒 This section is password protected. Please enter the password to view submissions.")
+        password = st.text_input("Enter password to view submissions:", type="password")
+        if st.button("Access Submissions"):
+            try:
+                # Use the same admin password for submissions viewing
+                view_password = st.secrets.get("ADMIN_PASSWORD", os.getenv('ADMIN_PASSWORD', 'admin123'))
+            except Exception:
+                view_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+            
+            if password == view_password:
+                st.session_state.submissions_authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ Invalid password")
+        return
+    
+    # Add logout button for submissions
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("🔓 Logout from Submissions"):
+            st.session_state.submissions_authenticated = False
+            st.rerun()
+    
     try:
         df = get_all_submissions()
         
