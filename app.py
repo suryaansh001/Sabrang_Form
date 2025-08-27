@@ -204,11 +204,9 @@ def show_submission_form():
                            help="Enter your complete name as you want it to appear")
         
         # Committee field
-        committee = st.selectbox("Committee *", 
-                               ["Select Committee", "Executive Committee", "Technical Committee", 
-                                "Marketing Committee", "Finance Committee", "Events Committee",
-                                "HR Committee", "Operations Committee", "Academic Committee"],
-                               help="Select the committee you want to join")
+        committee = st.text_input("Committee *", 
+                                 placeholder="Enter the committee name (e.g., Executive Committee, Technical Committee, etc.)",
+                                 help="Enter the name of the committee you want to join")
         
         # Social Media Links field
         social_media_links = st.text_area("Social Media Links", 
@@ -232,8 +230,10 @@ def show_submission_form():
         
         if submitted:
             # Validation
-            if not name or committee == "Select Committee" or not uploaded_file:
+            if not name or not committee or not uploaded_file:
                 st.error("Please fill in all required fields marked with *")
+            elif len(committee.strip()) < 2:
+                st.error("Please enter a valid committee name (at least 2 characters)")
             else:
                 # Validate social media links if provided
                 if social_media_links:
@@ -257,7 +257,7 @@ def show_submission_form():
                 data = (
                     submission_id,
                     name.strip(),
-                    committee,
+                    committee.strip(),
                     social_media_links.strip() if social_media_links else None,
                     uploaded_file.name,
                     photo_data
