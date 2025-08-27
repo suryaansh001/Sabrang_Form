@@ -3,7 +3,8 @@
 
 # Streamlit secrets (for local development)
 .streamlit/secrets.toml
-
+#exported_images 
+exported_images/
 # Python cache
 __pycache__/
 *.pyc
