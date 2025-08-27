@@ -268,7 +268,7 @@ def show_submission_form():
                     st.success(f"✅ Registration submitted and saved to database successfully!")
                     st.info(f"Your submission ID is: **{submission_id}**")
                     st.info(f"� Data has been securely stored in the MySQL database")
-                    st.balloons()
+                    st.snow()
                     
                     # Show summary
                     st.subheader("Registration Summary:")

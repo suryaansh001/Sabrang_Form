@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Committee Submissions Image Viewer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .image-card { border: 1px solid #ddd; margin: 20px 0; padding: 15px; border-radius: 8px; }
+        .image-card img { max-width: 100%; height: auto; border-radius: 4px; }
+        .info { margin: 10px 0; }
+        .submission-id { color: #666; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Committee Submissions Image Viewer</h1>
+        <p><strong>Instructions:</strong> Replace the BASE64_IMAGE_DATA with actual base64 data from SQL query.</p>
+        
+        <div class="image-card">
+            <div class="info">
+                <h3>John Doe</h3>
+                <p><strong>Committee:</strong> Executive Committee</p>
+                <p><strong>Submission ID:</strong> <span class="submission-id">ABC12345</span></p>
+                <p><strong>Date:</strong> 2025-08-28</p>
+            </div>
+            <!-- Replace BASE64_IMAGE_DATA with actual base64 from SQL -->
+            <img src="data:image/jpeg;base64,BASE64_IMAGE_DATA" alt="Profile Photo">
+        </div>
+        
+        <!-- SQL Query to get base64 data: -->
+        <!-- 
+        SELECT 
+            submission_id,
+            name,
+            committee,
+            TO_BASE64(photo_data) as image_base64,
+            DATE(submission_date) as date_submitted
+        FROM submissions 
+        WHERE photo_data IS NOT NULL
+        ORDER BY submission_date DESC;
+        -->
+    </div>
+</body>
+</html>
