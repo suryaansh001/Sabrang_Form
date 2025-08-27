@@ -57,7 +57,22 @@ def get_db_connection():
 
 def get_sqlalchemy_engine():
     """Create and return SQLAlchemy engine for pandas compatibility"""
-    db_url = f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+    try:
+        # Try Streamlit secrets first
+        db_user = st.secrets.get("DB_USER", os.getenv('DB_USER'))
+        db_password = st.secrets.get("DB_PASSWORD", os.getenv('DB_PASSWORD'))
+        db_host = st.secrets.get("DB_HOST", os.getenv('DB_HOST'))
+        db_port = st.secrets.get("DB_PORT", os.getenv('DB_PORT', 3306))
+        db_name = st.secrets.get("DB_NAME", os.getenv('DB_NAME'))
+    except Exception:
+        # Fallback to environment variables
+        db_user = os.getenv('DB_USER')
+        db_password = os.getenv('DB_PASSWORD')
+        db_host = os.getenv('DB_HOST')
+        db_port = os.getenv('DB_PORT', 3306)
+        db_name = os.getenv('DB_NAME')
+    
+    db_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     return create_engine(db_url)
 
 # Database setup
@@ -264,7 +279,9 @@ def show_submission_form():
                         for link in parse_social_media_links(social_media_links):
                             st.write(f"- {link}")
                 else:
-                    st.error("❌ Failed to save registration to database. Please try again.")def show_submissions():
+                    st.error("❌ Failed to save registration to database. Please try again.")
+
+def show_submissions():
     st.title("📋 Committee Member Registrations")
     
     try:
