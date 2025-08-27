@@ -15,18 +15,44 @@ load_dotenv()
 
 def get_db_connection():
     """Create and return a database connection"""
-    timeout = int(os.getenv('TIMEOUT', 10))
+    # Try to get from streamlit secrets first, then from environment variables
+    try:
+        # Streamlit secrets
+        db_config = {
+            'host': st.secrets.get("DB_HOST", os.getenv('DB_HOST')),
+            'port': int(st.secrets.get("DB_PORT", os.getenv('DB_PORT', 3306))),
+            'user': st.secrets.get("DB_USER", os.getenv('DB_USER')),
+            'password': st.secrets.get("DB_PASSWORD", os.getenv('DB_PASSWORD')),
+            'db': st.secrets.get("DB_NAME", os.getenv('DB_NAME')),
+            'timeout': int(st.secrets.get("TIMEOUT", os.getenv('TIMEOUT', 10)))
+        }
+    except Exception:
+        # Fallback to environment variables
+        db_config = {
+            'host': os.getenv('DB_HOST'),
+            'port': int(os.getenv('DB_PORT', 3306)),
+            'user': os.getenv('DB_USER'),
+            'password': os.getenv('DB_PASSWORD'),
+            'db': os.getenv('DB_NAME'),
+            'timeout': int(os.getenv('TIMEOUT', 10))
+        }
+    
+    # Validate required parameters
+    if not all([db_config['host'], db_config['user'], db_config['password'], db_config['db']]):
+        st.error("Database configuration is missing. Please check your environment variables or Streamlit secrets.")
+        st.stop()
+    
     return pymysql.connect(
         charset="utf8mb4",
-        connect_timeout=timeout,
+        connect_timeout=db_config['timeout'],
         cursorclass=pymysql.cursors.DictCursor,
-        db=os.getenv('DB_NAME'),
-        host=os.getenv('DB_HOST'),
-        password=os.getenv('DB_PASSWORD'),
-        read_timeout=timeout,
-        port=int(os.getenv('DB_PORT')),
-        user=os.getenv('DB_USER'),
-        write_timeout=timeout,
+        db=db_config['db'],
+        host=db_config['host'],
+        password=db_config['password'],
+        read_timeout=db_config['timeout'],
+        port=db_config['port'],
+        user=db_config['user'],
+        write_timeout=db_config['timeout'],
     )
 
 def get_sqlalchemy_engine():
@@ -37,31 +63,37 @@ def get_sqlalchemy_engine():
 # Database setup
 def init_database():
     """Initialize the MySQL database and create tables if they don't exist"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS submissions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            submission_id VARCHAR(50) UNIQUE,
-            name VARCHAR(255) NOT NULL,
-            committee VARCHAR(255) NOT NULL,
-            social_media_links TEXT,
-            photo_filename VARCHAR(255),
-            photo_data LONGBLOB,
-            submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS submissions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                submission_id VARCHAR(50) UNIQUE,
+                name VARCHAR(255) NOT NULL,
+                committee VARCHAR(255) NOT NULL,
+                social_media_links TEXT,
+                photo_filename VARCHAR(255),
+                photo_data LONGBLOB,
+                submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"Failed to initialize database: {e}")
+        st.error("Please check your database connection settings.")
+        return False
 
 def save_submission(data):
     """Save form submission to database"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
         cursor.execute('''
             INSERT INTO submissions 
             (submission_id, name, committee, social_media_links, photo_filename, photo_data)
@@ -69,23 +101,21 @@ def save_submission(data):
         ''', data)
         
         conn.commit()
+        rows_affected = cursor.rowcount
+        conn.close()
         
-        # Verify the record was saved
-        cursor.execute('SELECT COUNT(*) as count FROM submissions WHERE submission_id = %s', (data[0],))
-        result = cursor.fetchone()
-        
-        if result and result['count'] > 0:
-            st.success("✅ Successfully saved to database!")
+        if rows_affected > 0:
             return True
         else:
-            st.error("❌ Failed to verify database save")
+            st.error("No rows were inserted into the database")
             return False
             
-    except Exception as e:
-        st.error(f"❌ Database error: {e}")
+    except pymysql.Error as e:
+        st.error(f"Database error: {e}")
         return False
-    finally:
-        conn.close()
+    except Exception as e:
+        st.error(f"Error saving submission: {e}")
+        return False
 
 def get_all_submissions():
     """Retrieve all submissions from database"""
@@ -133,7 +163,9 @@ def main():
     )
     
     # Initialize database
-    init_database()
+    if not init_database():
+        st.error("❌ Database initialization failed. Please check your configuration.")
+        st.stop()
     
     # Sidebar for navigation
     st.sidebar.title("Navigation")
@@ -218,23 +250,21 @@ def show_submission_form():
                 
                 # Save to database
                 if save_submission(data):
-                    st.success(f"🎉 Registration submitted successfully!")
-                    st.info(f"📋 Your submission ID is: **{submission_id}**")
-                    st.success("💾 Data has been securely stored in the database")
+                    st.success(f"✅ Registration submitted and saved to database successfully!")
+                    st.info(f"Your submission ID is: **{submission_id}**")
+                    st.info(f"� Data has been securely stored in the MySQL database")
                     st.balloons()
                     
                     # Show summary
-                    st.subheader("📄 Registration Summary:")
-                    st.write(f"**👤 Name:** {name}")
-                    st.write(f"**🏢 Committee:** {committee}")
+                    st.subheader("Registration Summary:")
+                    st.write(f"**Name:** {name}")
+                    st.write(f"**Committee:** {committee}")
                     if social_media_links:
-                        st.write("**🔗 Social Media Links:**")
+                        st.write("**Social Media Links:**")
                         for link in parse_social_media_links(social_media_links):
                             st.write(f"- {link}")
                 else:
-                    st.error("❌ Failed to submit registration. Please try again.")
-
-def show_submissions():
+                    st.error("❌ Failed to save registration to database. Please try again.")def show_submissions():
     st.title("📋 Committee Member Registrations")
     
     try:
@@ -307,7 +337,11 @@ def show_admin_panel():
     if not st.session_state.admin_authenticated:
         password = st.text_input("Enter admin password:", type="password")
         if st.button("Login"):
-            admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+            try:
+                admin_password = st.secrets.get("ADMIN_PASSWORD", os.getenv('ADMIN_PASSWORD', 'admin123'))
+            except Exception:
+                admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+            
             if password == admin_password:
                 st.session_state.admin_authenticated = True
                 st.rerun()
