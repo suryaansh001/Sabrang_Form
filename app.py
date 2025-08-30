@@ -210,11 +210,11 @@ def show_submission_form():
         
         # Social Media Links field
         social_media_links = st.text_area("Social Media Links", 
-                                        placeholder="https://linkedin.com/in/yourprofile, https://twitter.com/yourhandle, https://instagram.com/yourhandle",
-                                        help="Enter your social media profile links separated by commas. Include full URLs (starting with https://)")
+                                        placeholder="linkedin.com/in/yourprofile, twitter.com/yourhandle, instagram.com/yourhandle, github.com/yourusername",
+                                        help="Enter your social media profile links separated by commas. You can include full URLs (https://...) or just the domain and path")
         
         # Image upload
-        uploaded_file = st.file_uploader("Upload Your Photo *", 
+        uploaded_file = st.file_uploader("Upload Your Photo (prefer a professional image)*", 
                                        type=['png', 'jpg', 'jpeg'], 
                                        help="Upload a clear photo of yourself (Supported formats: PNG, JPG, JPEG | Max size: 5MB)")
         
@@ -235,16 +235,20 @@ def show_submission_form():
             elif len(committee.strip()) < 2:
                 st.error("Please enter a valid committee name (at least 2 characters)")
             else:
-                # Validate social media links if provided
+                # Validate social media links if provided (flexible validation)
                 if social_media_links:
                     links = parse_social_media_links(social_media_links)
                     invalid_links = []
                     for link in links:
-                        if not (link.startswith('http://') or link.startswith('https://')):
+                        # More flexible validation - accept various formats
+                        if not (link.startswith('http://') or 
+                               link.startswith('https://') or 
+                               link.startswith('www.') or
+                               '.' in link):  # Basic check for domain-like structure
                             invalid_links.append(link)
                     
                     if invalid_links:
-                        st.error(f"Please provide valid URLs starting with http:// or https:// for: {', '.join(invalid_links)}")
+                        st.error(f"Please provide valid links or URLs for: {', '.join(invalid_links)}")
                         return
                 
                 # Generate unique submission ID
